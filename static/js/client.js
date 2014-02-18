@@ -1,3 +1,5 @@
+var maxCALLERS = 10;
+
 function initialize() {
   easyrtc.setRoomOccupantListener(roomListener);
   var connectSuccess = function(myId) {
@@ -23,21 +25,35 @@ easyrtc.setOnStreamClosed( function (callerEasyrtcid) {
 });
 
 function roomListener(roomName, otherPeers) {
-  var otherClientDiv = document.getElementById('otherClients');
-  while (otherClientDiv.hasChildNodes()) {
-    otherClientDiv.removeChild(otherClientDiv.lastChild);
-  }
-  for(var i in otherPeers) {
-    var button = document.createElement('button');
-    button.onclick = function(easyrtcid) {
-      return function() {
-        performCall(easyrtcid);
-      }
-    }(i);
+  var list = [];
+  var connectCount = 0;
 
-    label = document.createTextNode(i);
-    button.appendChild(label);
-    otherClientDiv.appendChild(button);
+  for(var easyrtcid in otherPeers ) {
+      list.push(easyrtcid);
+  }
+
+  function establishConnection(position) {
+    easyrtc.call(list[position], callSuccess, callFailure, callAccepted);
+    function callSuccess() {
+      console.log("Completed call to " + list[position]);
+      connectCount++;
+      if (connectCount < maxCALLERS && position > 0) {
+        establishConnection(position-1);
+      }
+    }
+    function callFailure(errorCode, errorText) {
+      console.log("err:" + errorText);
+      if (connectCount < maxCALLERS && position > 0) {
+        establishConnection(position-1);
+      }
+    }
+    function callAccepted(accepted, bywho) {
+      console.log((accepted ? "Accepted" : "Rejected")+ " by " + bywho);
+    }
+  }
+
+  if(list.length > 0) {
+    establishConnection(list.length-1);
   }
 }
 
