@@ -9,8 +9,6 @@ function initialize() {
   }
 
   easyrtc.initMediaSource(function() {
-    var selfVideo = document.getElementById("self");
-    easyrtc.setVideoObjectSrc(selfVideo, easyrtc.getLocalStream());
     easyrtc.connect("snackanet", connectSuccess, connectFailure);
   }, connectFailure);
 }
