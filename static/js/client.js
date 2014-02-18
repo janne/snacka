@@ -3,35 +3,43 @@ function initialize() {
     $('#status').html("Your browser has no access to the microphone. Please use Google Chrome, Mozilla Firefox or Opera browser.");
     return;
   }
-  easyrtc.enableVideo(false);
-  easyrtc.setRoomOccupantListener(roomListener);
 
-  var connectSuccess = function(myId) {
-    console.log("My easyrtcid is " + myId);
-    updateStatus();
-  }
+  easyrtc.enableVideo(false);
+
+  // Setup media source
+  easyrtc.initMediaSource(function() {
+    easyrtc.connect("snacka", function(id) {
+      console.log("Id: " + id);
+      updateStatus();
+    }, connectFailure);
+  }, connectFailure);
   var connectFailure = function(errorCode, errText) {
     $('#status').html(errText);
   }
-  easyrtc.initMediaSource(function() {
-    easyrtc.connect("snackanet", connectSuccess, connectFailure);
-  }, connectFailure);
 
+  // Call everybody
+  easyrtc.setRoomOccupantListener(function(room, others) {
+    easyrtc.setRoomOccupantListener(false);
+    for(var id in others) {
+      easyrtc.call(id);
+    }
+  });
 }
 
-function roomListener(roomName, otherPeers) {
-  easyrtc.setRoomOccupantListener(false); // Only do this on startup
-  for(var easyrtcid in otherPeers ) {
-    easyrtc.call(easyrtcid);
-  }
-}
-
-easyrtc.setStreamAcceptor( function(callerEasyrtcid, stream) {
-  $('#videos').append("<video id='" + callerEasyrtcid + "'></video>");
-  var video = document.getElementById(callerEasyrtcid);
+easyrtc.setStreamAcceptor( function(id, stream) {
+  $('#videos').append("<video id='" + id + "'></video>");
+  var video = document.getElementById(id);
   easyrtc.setVideoObjectSrc(video, stream);
   updateStatus();
-  console.log("Connected: " + callerEasyrtcid);
+  console.log("Connected: " + id);
+});
+
+easyrtc.setOnStreamClosed(function (id) {
+  var video = document.getElementById(id);
+  easyrtc.setVideoObjectSrc(video, "");
+  $(video).remove();
+  $('#count').html($('video').length);
+  console.log("Disconnected: " + id);
 });
 
 function updateStatus() {
@@ -42,12 +50,3 @@ function updateStatus() {
   }
   $('#status').html(status);
 }
-
-easyrtc.setOnStreamClosed( function (callerEasyrtcid) {
-  var video = document.getElementById(callerEasyrtcid);
-  easyrtc.setVideoObjectSrc(video, "");
-  $(video).remove();
-  $('#count').html($('video').length);
-  console.log("Disconnected: " + callerEasyrtcid);
-});
-
