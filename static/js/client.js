@@ -1,6 +1,5 @@
-var maxCALLERS = 10;
-
 function initialize() {
+  easyrtc.enableVideo(false);
   easyrtc.setRoomOccupantListener(roomListener);
   var connectSuccess = function(myId) {
     console.log("My easyrtcid is " + myId);
@@ -15,54 +14,26 @@ function initialize() {
   }, connectFailure);
 }
 
+function roomListener(roomName, otherPeers) {
+  easyrtc.setRoomOccupantListener(false); // Only do this on startup
+  for(var easyrtcid in otherPeers ) {
+    easyrtc.call(easyrtcid);
+  }
+}
+
 easyrtc.setStreamAcceptor( function(callerEasyrtcid, stream) {
-  var video = document.getElementById('caller');
+  $('#videos').append("<video id='" + callerEasyrtcid + "'></video>");
+  var video = document.getElementById(callerEasyrtcid);
   easyrtc.setVideoObjectSrc(video, stream);
+  $('#count').html($('video').length);
+  console.log("Connected: " + callerEasyrtcid);
 });
 
 easyrtc.setOnStreamClosed( function (callerEasyrtcid) {
-  easyrtc.setVideoObjectSrc(document.getElementById('caller'), "");
+  var video = document.getElementById(callerEasyrtcid);
+  easyrtc.setVideoObjectSrc(video, "");
+  $(video).remove();
+  $('#count').html($('video').length);
+  console.log("Disconnected: " + callerEasyrtcid);
 });
 
-function roomListener(roomName, otherPeers) {
-  var list = [];
-  var connectCount = 0;
-
-  for(var easyrtcid in otherPeers ) {
-      list.push(easyrtcid);
-  }
-
-  function establishConnection(position) {
-    easyrtc.call(list[position], callSuccess, callFailure, callAccepted);
-    function callSuccess() {
-      console.log("Completed call to " + list[position]);
-      connectCount++;
-      if (connectCount < maxCALLERS && position > 0) {
-        establishConnection(position-1);
-      }
-    }
-    function callFailure(errorCode, errorText) {
-      console.log("err:" + errorText);
-      if (connectCount < maxCALLERS && position > 0) {
-        establishConnection(position-1);
-      }
-    }
-    function callAccepted(accepted, bywho) {
-      console.log((accepted ? "Accepted" : "Rejected")+ " by " + bywho);
-    }
-  }
-
-  if(list.length > 0) {
-    establishConnection(list.length-1);
-  }
-}
-
-function performCall(easyrtcid) {
-  easyrtc.call(easyrtcid,
-    function(easyrtcid) { console.log("Completed call to " + easyrtcid);},
-    function(errorCode, errorText) { console.log("err:" + errorText);},
-    function(accepted, bywho) {
-      console.log((accepted ? "Accepted" : "Rejected")+ " by " + bywho);
-    }
-  );
-}
